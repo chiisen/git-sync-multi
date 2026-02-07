@@ -57,8 +57,42 @@ foreach ($dir in $directories) {
     if (Test-Path $gitDir) {
         $totalCount++
         # 執行 git status --porcelain
-        $status = git -C $dir.FullName status --porcelain 2>$null
-                if ($status) {
+        $status = @(git -C $dir.FullName status --porcelain 2>$null | Where-Object { $_.Trim() -ne "" })
+        
+        if ($status.Count -eq 1 -and ($status[0] -match "setup_git_sync.ps1" -or $status[0] -match "\.python-version")) {
+            # 💡 特殊處理：如果唯一的變更只有 setup_git_sync.ps1 或 .python-version，則捨棄變更
+            $fileName = $status[0].Substring(3).Trim()
+            
+            # 1. 處理已追蹤的修改 (Modified)
+            git -C $dir.FullName checkout -- $fileName 2>$null
+            # 2. 處理未追蹤的檔案 (Untracked ??)
+            git -C $dir.FullName clean -f $fileName 2>$null
+            
+            # 重新確認狀態
+            $status = @(git -C $dir.FullName status --porcelain 2>$null | Where-Object { $_.Trim() -ne "" })
+        }
+
+        # 💡 特殊處理：如果異動只有 desktop.ini 或 folderico-green.ico，則自動 commit & pull
+        if ($status.Count -gt 0) {
+            $onlyIcons = $true
+            foreach ($line in $status) {
+                if ($line -notmatch "desktop\.ini" -and $line -notmatch "folderico-green\.ico") {
+                    $onlyIcons = $false
+                    break
+                }
+            }
+
+            if ($onlyIcons) {
+                Write-Host "🎨 [$($dir.Name)] 偵測到圖示設定異動，執行自動同步..." -ForegroundColor Cyan
+                git -C $dir.FullName add desktop.ini folderico-green.ico 2>$null
+                git -C $dir.FullName commit -m "feat: 更新目錄 icon" 2>$null
+                git -C $dir.FullName pull 2>$null
+                # 重新確認狀態
+                $status = @(git -C $dir.FullName status --porcelain 2>$null | Where-Object { $_.Trim() -ne "" })
+            }
+        }
+
+        if ($status) {
             # 嘗試取得 GitHub 描述與屬性 (Description, isFork, isPrivate)
             $description = "(無法取得描述)"
             $isFork = $false
