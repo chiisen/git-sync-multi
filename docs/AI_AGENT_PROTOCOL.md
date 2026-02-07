@@ -32,6 +32,7 @@
 ## 3. 🚀 效能意識 (Performance Awareness)
 - **平行處理 (Parallel Processing)**：
     - 對於涉及網路等待 (Network IO) 或大量檔案操作的批次任務，預設採用 PowerShell 7 的 `ForEach-Object -Parallel` 進行優化。
+    - **併發限制 (Concurrency Limit)**：為避免觸發外部 API (如 GitHub) Rate Limit，預設 ThrottleLimit **不得超過 5**。
 - **記憶體緩衝 (Memory Buffer)**：
     - 在平行處理中，**嚴禁**使用多執行緒直接寫入同一檔案（避免 File Lock）。
     - **必須**使用管線 (Pipeline) 將日誌訊息回傳至主執行緒變數 (`$buffer`)，待處理完畢後再一次性批次寫入 (Batch Write)。

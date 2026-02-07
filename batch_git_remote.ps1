@@ -60,71 +60,145 @@ $null | Out-File -FilePath $projectsExtractPath -Encoding utf8
 # 取得所有子目錄
 $directories = Get-ChildItem -Path $rootPath -Directory
 
+
+# 取得所有子目錄
+$directories = Get-ChildItem -Path $rootPath -Directory
+
+# 平行處理設定
+$throttleLimit = 5 # 同時執行的執行緒數量 (保守設定以避免 GitHub API Rate Limit)
+
+Write-Host "偵測到 $($directories.Count) 個目錄，開始平行掃描 (加速模式)..." -ForegroundColor Cyan
+$measure = Measure-Command {
+    # 平行處理並收集輸出
+    $results = $directories | ForEach-Object -Parallel {
+        $dir = $_
+        $gitDir = Join-Path $dir.FullName ".git"
+        
+        # 定義回傳物件結構
+        $result = @{
+            Type = "Skip" # Log, Debug, Exclude, Export
+            Content = ""
+            DirPath = $dir.FullName
+            DirName = $dir.Name
+        }
+
+        if (Test-Path $gitDir) {
+            # 執行 git remote -v
+            $remotes = @(git -C $dir.FullName remote -v 2>$null | Where-Object { $_.Trim() -ne "" })
+            
+            if ($remotes.Count -eq 2) {
+                # 標準兩筆 (Fetch/Push)
+                # 解析遠端 URL 以取得 owner/repo (優先看 fetch)
+                $fetchLine = $remotes | Where-Object { $_ -match "\(fetch\)" }
+                
+                if ($fetchLine -match '[:/](?<owner>[^:/]+)/(?<repo>.+)\.git') {
+                    $owner = $Matches['owner']
+                    $repoName = $Matches['repo']
+                    $repoFull = "$owner/$repoName"
+
+                    # 透過 gh 檢查屬性並排除 Private/Fork
+                    # 使用 $using:env:GITHUB_ACCOUNT 存取外部環境變數
+                    $currentAccount = $using:env:GITHUB_ACCOUNT 
+
+                    $repoData = gh repo view $repoFull --json description,isPrivate,isFork 2>$null | ConvertFrom-Json
+                    if ($null -ne $repoData) {
+                        $desc = if ($null -ne $repoData.description) { $repoData.description } else { "" }
+                        $isPrivate = $repoData.isPrivate
+                        $isFork = $repoData.isFork
+                        $isDone = $desc.Trim().StartsWith("✅")
+                        
+                        # 檢查 Owner 是否為當前使用者
+                        $isDifferentOwner = $false
+                        if (-not [string]::IsNullOrEmpty($currentAccount)) {
+                            $isDifferentOwner = ($owner -ne $currentAccount)
+                        }
+
+                        if (-not $isPrivate -and -not $isFork -and -not $isDone -and -not $isDifferentOwner) {
+                            # [Export] 成功導出
+                            return @{
+                                Type = "Export"
+                                Content = "$repoName --public --description `"$desc`""
+                                LogContent = "[$($dir.Name)]`n$($remotes -join "`n")`n"
+                                DirName = $dir.Name
+                                IsPrivate = $isPrivate
+                                IsFork = $isFork
+                                IsDone = $isDone
+                            }
+                        } else {
+                            # [Exclude] 排除項目
+                            $reason = if($isPrivate){"私有專案 (Private)"}elseif($isFork){"分支專案 (Fork)"}elseif($isDone){"GitHub 描述文字開頭為 ✅ (已完成)"}elseif($isDifferentOwner){"專案擁有者 ($owner) 非當前帳號 ($currentAccount)"}
+                            return @{
+                                Type = "Exclude"
+                                Content = "[$repoName] -- $reason"
+                                LogContent = "[$($dir.Name)]`n$($remotes -join "`n")`n"
+                            }
+                        }
+                    } else {
+                        return @{ Type = "Exclude"; Content = "[$($dir.Name)] -- 非 GitHub 專案或 API 錯誤" }
+                    }
+                    # 稍微延遲避免 GitHub API 速率限制
+                    Start-Sleep -Milliseconds 50
+                } else {
+                    return @{ Type = "Exclude"; Content = "[$($dir.Name)] -- 無法解析遠端位址格式" }
+                }
+            } elseif ($remotes.Count -gt 2) {
+                # [Debug] 超過兩筆
+                $reason = "偵測到多個遠端位址 ($($remotes.Count) 筆)"
+                return @{
+                    Type = "Debug"
+                    ExcludeContent = "[$($dir.Name)] -- $reason"
+                    DebugContent = "[$($dir.Name)] ($($remotes.Count) 筆)`n$($remotes -join "`n")`n"
+                }
+            } else {
+                # [Exclude] 0 筆或 1 筆
+                $reason = if ($remotes.Count -eq 0) { "無遠端位址" } else { "單一遠端位址 ($($remotes.Count) 筆)" }
+                return @{
+                    Type = "Exclude"
+                    Content = "[$($dir.Name)] -- $reason"
+                    LogContent = "[$($dir.Name)] ($reason)`n$($remotes -join "`n")`n"
+                }
+            }
+        }
+        return $null
+    } -ThrottleLimit $throttleLimit
+}
+
+# 處理並歸類結果 (Batch Write)
+$logBuffer = [System.Collections.Generic.List[string]]::new()
+$debugBuffer = [System.Collections.Generic.List[string]]::new()
+$excludeBuffer = [System.Collections.Generic.List[string]]::new()
+$exportBuffer = [System.Collections.Generic.List[string]]::new()
 $repoCount = 0
 
-foreach ($dir in $directories) {
-    $gitDir = Join-Path $dir.FullName ".git"
-    
-    if (Test-Path $gitDir) {
-        $repoCount++
-        
-        # 執行 git remote -v
-        $remotes = @(git -C $dir.FullName remote -v 2>$null | Where-Object { $_.Trim() -ne "" })
-        
-        if ($remotes.Count -eq 2) {
-            # 標準兩筆 (Fetch/Push)，寫入標準 Log
-            "[$($dir.Name)]`n$($remotes -join "`n")`n" | Out-File -FilePath $logPath -Append -Encoding utf8
-            # 解析遠端 URL 以取得 owner/repo (優先看 fetch)
-            $fetchLine = $remotes | Where-Object { $_ -match "\(fetch\)" }
-            # 修正後的正規表達式：支援 repo 名稱中包含點 (.)
-            if ($fetchLine -match '[:/](?<owner>[^:/]+)/(?<repo>.+)\.git') {
-                $owner = $Matches['owner']
-                $repoName = $Matches['repo']
-                $repoFull = "$owner/$repoName"
+foreach ($res in $results) {
+    if ($null -eq $res) { continue }
+    $repoCount++
 
-                # 透過 gh 檢查屬性並排除 Private/Fork
-                $repoData = gh repo view $repoFull --json description,isPrivate,isFork 2>$null | ConvertFrom-Json
-                if ($null -ne $repoData) {
-                    $desc = if ($repoData.description) { $repoData.description } else { "" }
-                    $isPrivate = $repoData.isPrivate
-                    $isFork = $repoData.isFork
-                    $isDone = ($null -ne $desc) -and $desc.Trim().StartsWith("✅")
-
-                    if (-not $isPrivate -and -not $isFork -and -not $isDone) {
-                        # 格式: 專案名稱 --public --description "..."
-                        $exportLine = "$repoName --public --description `"$desc`""
-                        $exportLine | Out-File -FilePath $projectsExtractPath -Append -Encoding utf8
-                        
-                        # 僅在成功時在畫面上顯示處理資訊與導出狀態
-                        Write-Host "處理專案: $($dir.Name)" -ForegroundColor Gray
-                        Write-Host "    [DEBUG] Private: $isPrivate, Fork: $isFork, Done: $isDone" -ForegroundColor Gray
-                        Write-Host "  [✅ 已導出 extracted_projects.txt] $repoName" -ForegroundColor Green
-                    } else {
-                        # 排除項目僅記錄到專屬 Log
-                        $reason = if($isPrivate){"私有專案 (Private)"}elseif($isFork){"分支專案 (Fork)"}elseif($isDone){"GitHub 描述文字開頭為 ✅ (已完成)"}
-                        "[$repoName] -- $reason" | Out-File -FilePath $excludedLogPath -Append -Encoding utf8
-                    }
-                } else {
-                    "[$($dir.Name)] -- 非 GitHub 專案或 API 錯誤 (可能未登入 gh)" | Out-File -FilePath $excludedLogPath -Append -Encoding utf8
-                }
-                # 稍微延遲避免 GitHub API 速率限制
-                Start-Sleep -Milliseconds 100
-            } else {
-                "[$($dir.Name)] -- 無法解析遠端位址格式" | Out-File -FilePath $excludedLogPath -Append -Encoding utf8
-            }
-        } elseif ($remotes.Count -gt 2) {
-            # 超過兩筆，寫入 Debug Log 並記錄原因
-            $reason = "偵測到多個遠端位址 ($($remotes.Count) 筆)"
-            "[$($dir.Name)] -- $reason" | Out-File -FilePath $excludedLogPath -Append -Encoding utf8
-            "[$($dir.Name)] ($($remotes.Count) 筆)`n$($remotes -join "`n")`n" | Out-File -FilePath $debugLogPath -Append -Encoding utf8
-        } else {
-            # 0 筆或 1 筆等非標準情況
-            $reason = if ($remotes.Count -eq 0) { "無遠端位址" } else { "單一遠端位址 ($($remotes.Count) 筆)" }
-            "[$($dir.Name)] -- $reason" | Out-File -FilePath $excludedLogPath -Append -Encoding utf8
-            "[$($dir.Name)] ($reason)`n$($remotes -join "`n")`n" | Out-File -FilePath $logPath -Append -Encoding utf8
+    switch ($res.Type) {
+        "Export" {
+            $exportBuffer.Add($res.Content)
+            $logBuffer.Add($res.LogContent)
+            # 畫面顯示成功
+            Write-Host "處理專案: $($res.DirName)" -ForegroundColor Gray
+            Write-Host "    [DEBUG] Private: $($res.IsPrivate), Fork: $($res.IsFork), Done: $($res.IsDone)" -ForegroundColor Gray
+            Write-Host "  [✅ 已導出 extracted_projects.txt] $($res.DirName)" -ForegroundColor Green
+        }
+        "Exclude" {
+            $excludeBuffer.Add($res.Content)
+            if ($res.LogContent) { $logBuffer.Add($res.LogContent) }
+        }
+        "Debug" {
+            $excludeBuffer.Add($res.ExcludeContent)
+            $debugBuffer.Add($res.DebugContent)
         }
     }
 }
+
+# 一次性寫入所有檔案 (Batch Write)
+if ($logBuffer.Count -gt 0) { $logBuffer | Out-File -FilePath $logPath -Append -Encoding utf8 }
+if ($debugBuffer.Count -gt 0) { $debugBuffer | Out-File -FilePath $debugLogPath -Append -Encoding utf8 }
+if ($excludeBuffer.Count -gt 0) { $excludeBuffer | Out-File -FilePath $excludedLogPath -Append -Encoding utf8 }
+if ($exportBuffer.Count -gt 0) { $exportBuffer | Out-File -FilePath $projectsExtractPath -Append -Encoding utf8 }
 
 $endTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
 $summary = "`n--- 掃描完成 ($endTime) ---`n掃描總專案數: $repoCount"

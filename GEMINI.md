@@ -55,6 +55,7 @@ graph TD
 
 ### 3. 效能優化與資源同步
 - **平行處理判斷**: AI 代理人應自行判定任務特性。凡涉及大量網路等待（如 `git pull`、`gh repo view`）或批次磁碟操作，應優先使用 PowerShell 7 的 `ForEach-Object -Parallel` 進行優化。
+    - **併發限制 (ThrottleLimit)**: 為避免觸發 GitHub API Rate Limit，預設併發數應設定為 **5** (保守設定)。
 - **併發安全與寫入效率**: 執行平行處理時，若需寫入日誌 (Log) 等共用資源：
     - **優先使用 Memory Buffer**: 透過管線收回訊息，在平行區塊結束後再一次性批次寫入檔案。
     - **資源鎖定 (Lock)**: 若情境無法使用 Buffer，必須使用 `[System.Threading.Monitor]` 進行互斥鎖處理，嚴禁在平行執行緒中直接無保護地寫入同一個檔案。

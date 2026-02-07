@@ -43,6 +43,9 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out
 
 Write-Host "開始批次執行 git pull: $rootPath ..." -ForegroundColor Cyan
 
+# 平行處理設定
+$throttleLimit = 5 # 同時執行的執行緒數量 (保守設定以避免 GitHub API Rate Limit)
+
 # 清空之前的 Log
 "" | Out-File -FilePath $logPath -Encoding utf8
 
@@ -75,7 +78,7 @@ $executionTime = Measure-Command {
                 Write-Host "✅ [成功] $($dir.Name)" -ForegroundColor Green
             }
         }
-    } -ThrottleLimit 10
+    } -ThrottleLimit $throttleLimit
 }
 
 $minutes = [Math]::Floor($executionTime.TotalMinutes)

@@ -42,6 +42,9 @@ $targetFileName = "setup_git_sync.ps1"
 # 確保 Log 資料夾存在
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
 
+# 平行處理設定
+$throttleLimit = 5 # 同時執行的執行緒數量 (保守設定以避免 GitHub API Rate Limit)
+
 # 初始 Log (清空舊資料)
 "--- Excluded Sync Projects List ---`n" | Out-File -FilePath $excludedLogPath -Encoding utf8
 
@@ -113,7 +116,7 @@ $executionTime = Measure-Command {
         catch {
             Write-Host "錯誤 (無法建立於 $($dir.Name)): $($_.Exception.Message)" -ForegroundColor Red
         }
-    } -ThrottleLimit 10
+    } -ThrottleLimit $throttleLimit
 
     # 批次寫入記憶體中的 Log 緩衝區
     if ($logBuffer) {
