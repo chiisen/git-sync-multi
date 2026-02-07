@@ -21,19 +21,22 @@
 ---
 
 ### 2. batch_git_pull.ps1 (批次更新)
-自動掃描指定目錄下的所有子資料夾，若發現為 Git 倉庫，則自動執行 `git pull` 以同步遠端更新。
-
 #### 功能特點
+- **平行更新 (並行處理)**：使用 PowerShell 7 並行技術，同時執行多個 `git pull`，大幅提升更新速度。
+- **自動計數與耗時統計**：顯示偵測到的倉庫總數，並於結束時回報總執行時間。
 - **自動切換帳號**：啟動時自動讀取 `.env` 中的 `GITHUB_ACCOUNT` 並切換，確保更新權限。
 
 #### 使用方法
 - 在 PowerShell 中執行：`./batch_git_pull.ps1`
-- **錯誤記錄**：若執行過程中發生錯誤，將會記錄在 `logs/git_pull_errors.log` 中。
+- **錯誤紀錄**：若執行過程中發生錯誤，將會記錄在 `logs/git_pull_errors.log` 中。
 
 ---
 
 ### 3. batch_create_git_sync.ps1 (批次初始化)
-批次為每個子目錄建立 `setup_git_sync.ps1` 同步設定腳本。
+#### 功能特點
+- **自動切換帳號**：啟動時自動讀取 `.env` 中的 `GITHUB_ACCOUNT` 並切換，確保抓取權限。
+- **智慧過濾**：自動跳過 **Private (私人)**、**Fork** 或描述以 **✅** 開頭的專案。
+- **日誌追蹤**：被跳過的專案及其原因會詳細記錄於 `logs/excluded_sync_projects.log`。
 
 #### setup_git_sync.ps1 特色
 每個生成的腳本現在都具備 **等冪性 (Idempotence)** / **自愈能力**：
@@ -111,6 +114,13 @@ GITHUB_ACCOUNT=your_username        # 您的主要 GitHub 帳號
 
 ---
 
+### 4. AI 代理人指南 (GEMINI.md)
+為了優化與 AI (如 Gemini, Claude, Cursor) 的協作體驗，專案根目錄包含專屬的 **`GEMINI.md`**：
+- **內容**：紀錄本專案的路徑規範（logs/ini/out）、自動化自愈邏輯、以及平行處理效能共識。
+- **作用**：當您使用 AI Agent 協助開發時，它會自動讀取此檔案以確保遵循既有的開發習慣，避免路徑衝突或重複說明。
+
+---
+
 ## � 日誌紀錄 (Logs)
 
 本工具產生的日誌檔案均存放在 **`./logs/`** 目錄下，且已加入 `.gitignore`：
@@ -119,6 +129,7 @@ GITHUB_ACCOUNT=your_username        # 您的主要 GitHub 帳號
 - **`logs/git_remote_list.log`**: 記錄掃描到的標準遠端位址清單。
 - **`logs/excluded_projects.log`**: 紀錄 `batch_git_remote.ps1` 略過專案的詳細原因。
 - **`logs/git_remote_debug.log`**: 記錄擁有多重遠端位址的專案。
+- **`logs/excluded_sync_projects.log`**: 記錄 `batch_create_git_sync.ps1` 略過的專案（Private, Fork, 或 ✅）。
 - **`out/extracted_projects.txt`**: 導出的可用專案清單，格式符合 `projects.txt`。
 - **`logs/git_pull_errors.log`**: 記錄更新失敗的倉庫。
 - **`logs/git_status_changed.log`**: 記錄偵測到異動的檔案清單與專案描述。
@@ -136,5 +147,6 @@ GITHUB_ACCOUNT=your_username        # 您的主要 GitHub 帳號
 - `ini/accounts.txt.example`: 帳號清單範本。
 - `ini/projects.txt.example`: 專案清單範本。
 - `.env.example`: 環境變數範本。
+- `GEMINI.md`: AI 代理人協作規範與專案開發慣例。
 
 

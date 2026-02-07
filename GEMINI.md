@@ -24,8 +24,11 @@
 - **跳過 已完成專案**: 若 GitHub Description 以 `✅` 開頭，視為已完成並過濾。
 - **靜默處理**: 被過濾的項應記錄於 `logs/`，減少終端機干擾。
 
-### 3. 效能優化
-- **平行處理**: 涉及網路等待（如 `git pull`, `git status`）的批次操作，應優先使用 PowerShell 7 的 `ForEach-Object -Parallel` 進行優化。
+### 3. 效能優化與資源同步
+- **平行處理判斷**: AI 代理人應自行判定任務特性。凡涉及大量網路等待（如 `git pull`、`gh repo view`）或批次磁碟操作，應優先使用 PowerShell 7 的 `ForEach-Object -Parallel` 進行優化。
+- **併發安全與寫入效率**: 執行平行處理時，若需寫入日誌 (Log) 等共用資源：
+    - **優先使用 Memory Buffer**: 透過管線收回訊息，在平行區塊結束後再一次性批次寫入檔案。
+    - **資源鎖定 (Lock)**: 若情境無法使用 Buffer，必須使用 `[System.Threading.Monitor]` 進行互斥鎖處理，嚴禁在平行執行緒中直接無保護地寫入同一個檔案。
 
 ### 4. 自動化自愈
 - **自動復原雜訊**: 對於 `.python-version` 或 `setup_git_sync.ps1` 這類環境產生的唯一變動，腳本應具備自動執行 `git checkout` 或 `git clean` 以還原乾淨狀態的能力。
