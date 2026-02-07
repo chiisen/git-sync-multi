@@ -114,15 +114,17 @@ $measure = Measure-Command {
                         }
 
                         if (-not $isPrivate -and -not $isFork -and -not $isDone -and -not $isDifferentOwner) {
+                            # 畫面即時顯示成功
+                            Write-Host "處理專案: $($dir.Name)" -ForegroundColor Gray
+                            Write-Host "  [✅ 已導出 extracted_projects.txt] $($dir.Name)" -ForegroundColor Green
+                            
                             # [Export] 成功導出
+                            $debugInfo = "    [DEBUG] Private: $isPrivate, Fork: $isFork, Done: $isDone"
                             return @{
                                 Type = "Export"
                                 Content = "$repoName --public --description `"$desc`""
-                                LogContent = "[$($dir.Name)]`n$($remotes -join "`n")`n"
+                                LogContent = "[$($dir.Name)]`n$debugInfo`n$($remotes -join "`n")`n"
                                 DirName = $dir.Name
-                                IsPrivate = $isPrivate
-                                IsFork = $isFork
-                                IsDone = $isDone
                             }
                         } else {
                             # [Exclude] 排除項目
@@ -178,10 +180,6 @@ foreach ($res in $results) {
         "Export" {
             $exportBuffer.Add($res.Content)
             $logBuffer.Add($res.LogContent)
-            # 畫面顯示成功
-            Write-Host "處理專案: $($res.DirName)" -ForegroundColor Gray
-            Write-Host "    [DEBUG] Private: $($res.IsPrivate), Fork: $($res.IsFork), Done: $($res.IsDone)" -ForegroundColor Gray
-            Write-Host "  [✅ 已導出 extracted_projects.txt] $($res.DirName)" -ForegroundColor Green
         }
         "Exclude" {
             $excludeBuffer.Add($res.Content)
