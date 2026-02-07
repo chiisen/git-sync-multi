@@ -29,6 +29,25 @@ function Check-GhCli {
     return $true
 }
 
+# 清理 Description 中的控制字元
+function Sanitize-Description {
+    param([string]$Description)
+    
+    if ([string]::IsNullOrEmpty($Description)) { return "" }
+    
+    # 移除換行 (\r\n, \n) 和 Tab (\t) 等控制字元
+    $cleanDesc = $Description -replace '[\r\n\t]+', ' '
+    # 移除頭尾空白
+    $cleanDesc = $cleanDesc.Trim()
+    
+    # 若有清理過 (內容改變)，加上 ⁉️ 提醒
+    if ($cleanDesc -ne $Description.Trim()) {
+        $cleanDesc = "⁉️ $cleanDesc"
+    }
+    
+    return $cleanDesc
+}
+
 Load-Env
 
 # 切換 GitHub 帳號 (確保權限正確)
@@ -108,6 +127,17 @@ foreach ($owner in $accounts) {
         if ($trimmedLine -match '^(?<name>[^\s]+)(\s+(?<params>.+))?$') {
             $repoName = $Matches['name']
             $extraParams = if ($Matches['params']) { $Matches['params'] } else { "--private" }
+            
+            # 對專案進行 Description 控制字元淨化
+            if ($extraParams -match '--description\s+"([^"]*)"') {
+                $originalDesc = $Matches[1]
+                $sanitizedDesc = Sanitize-Description -Description $originalDesc
+                
+                if ($sanitizedDesc -ne $originalDesc) {
+                    Write-Host "  ⚠️ Description 包含控制字元，已自動清理。" -ForegroundColor Yellow
+                    $extraParams = $extraParams -replace '--description\s+"[^"]*"', "--description `"$sanitizedDesc`""
+                }
+            }
             
             $repoFull = "$owner/$repoName"
             $targetDir = Join-Path $rootPath $repoName
@@ -203,6 +233,51 @@ foreach ($owner in $accounts) {
                     }
                 } catch {
                     Write-Host "執行過程發生意外錯誤: $($_.Exception.Message)" -ForegroundColor Red
+                }
+            }
+        }
+    }
+}
+
+# --- 更新主帳號 Repository Description ---
+if ($mainAccount) {
+    Write-Host "`n==========================================" -ForegroundColor Magenta
+    Write-Host "更新主帳號 ($mainAccount) Repository Description..." -ForegroundColor Cyan
+    
+    # 切換回主帳號
+    gh auth switch --user $mainAccount 2>$null
+    Start-Sleep -Seconds 2
+    
+    foreach ($line in $projects) {
+        $trimmedLine = $line.Trim()
+        if ($trimmedLine -match '^(?<name>[^\s]+)(\s+(?<params>.+))?$') {
+            $repoName = $Matches['name']
+            $mainRepoFull = "$mainAccount/$repoName"
+            
+            # 取得主帳號 Repository 現有 Description
+            $repoInfoJson = gh repo view $mainRepoFull --json description 2>$null | ConvertFrom-Json
+            
+            if ($null -ne $repoInfoJson) {
+                $currentDesc = if ($repoInfoJson.description) { $repoInfoJson.description } else { "" }
+                
+                # 若開頭不是 ✅ 也不是 ⁉️，加上 ⁉️ 提醒
+                if (-not $currentDesc.StartsWith("✅") -and -not $currentDesc.StartsWith("⁉️")) {
+                    $newDesc = "⁉️ $currentDesc"
+                    Write-Host "`n------------------------------------------" -ForegroundColor Gray
+                    Write-Host "更新: $mainRepoFull" -ForegroundColor Cyan
+                    Write-Host "  原始: $currentDesc" -ForegroundColor Gray
+                    Write-Host "  新增: $newDesc" -ForegroundColor Yellow
+                    
+                    gh repo edit $mainRepoFull --description "$newDesc" 2>$null
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host "  ✅ 更新成功" -ForegroundColor Green
+                        "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [UPDATE] $mainRepoFull description updated with ⁉️" | Out-File -FilePath $createLogPath -Append
+                    } else {
+                        Write-Host "  ❌ 更新失敗" -ForegroundColor Red
+                    }
+                } else {
+                    Write-Host "跳過: $mainRepoFull (description 已有 ✅ 或 ⁉️ 標記)" -ForegroundColor Gray
                 }
             }
         }
