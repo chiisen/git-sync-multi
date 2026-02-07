@@ -29,6 +29,16 @@
   ./batch_create_git_sync.ps1
   ```
 
+### 3. batch_git_status.ps1 (批次狀態檢查)
+檢查 `ROOT_PATH` 下所有 Git 專案是否有未提交的異動（Modified, Untracked 等）。
+
+#### 使用方法
+- 在 PowerShell 中執行：
+  ```powershell
+  ./batch_git_status.ps1
+  ```
+- **記錄檔**：有異動的目錄與具體檔案清單會記錄在 `git_status_changed.log` 中。
+
 ---
 
 ## ⚙️ 環境配置 (.env)
@@ -36,13 +46,15 @@
 
 | 變數名稱 | 說明 | 範例 |
 | :--- | :--- | :--- |
-| `ROOT_PATH` | 所有 Git 專案的父目錄路徑 | `D:\github\chiisen\` |
+| `ROOT_PATH` | 所有 Git 專案 export 的父目錄路徑 | `D:\github\chiisen\` |
 
 ---
 
 ## 📄 檔案結構
 - `batch_git_pull.ps1`: 批次執行 `git pull` 的主腳本。
 - `batch_create_git_sync.ps1`: 批次建立同步設定的輔助腳本。
+- `batch_git_status.ps1`: 批次檢查 Git 異動狀態的腳本。
 - `setup_git_sync.ps1.example`: `setup_git_sync.ps1` 的內容範本。
 - `.env`: 環境變數設定檔。
+
 
