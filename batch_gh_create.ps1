@@ -24,6 +24,12 @@ function Check-GhCli {
 }
 
 Load-Env
+
+# 切換 GitHub 帳號 (確保權限正確)
+if ($env:GITHUB_ACCOUNT) {
+    Write-Host "切換 GitHub 帳號至: $env:GITHUB_ACCOUNT" -ForegroundColor Cyan
+    gh auth switch -u $env:GITHUB_ACCOUNT 2>$null
+}
 if (-not (Check-GhCli)) { exit }
 
 # 顯示當前 GitHub 帳號狀態
