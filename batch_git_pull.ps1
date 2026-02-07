@@ -1,3 +1,9 @@
+# ==============================================================================
+# 腳本名稱: batch_git_pull.ps1
+# 功能描述: 批次並行更新工具。
+#           自動掃描目錄並使用並行技術同時執行 git pull，大幅提升同步效率。
+# ==============================================================================
+
 # 定義載入 .env 的函式
 function Load-Env {
     param($Path = ".env")
@@ -22,6 +28,10 @@ if ($env:GITHUB_ACCOUNT) {
     Write-Host "切換 GitHub 帳號至: $env:GITHUB_ACCOUNT" -ForegroundColor Cyan
     gh auth switch -u $env:GITHUB_ACCOUNT 2>$null
 }
+
+Write-Host ">>> 批次並行更新工具" -ForegroundColor Yellow
+Write-Host "功能：自動掃描並使用並行技術執行 git pull，大幅提升多目錄同步效率。" -ForegroundColor Gray
+Write-Host ""
 
 # 設定搜尋的根目錄 (優先從環境變數取得)
 $rootPath = if ($env:ROOT_PATH) { $env:ROOT_PATH } else { "D:\github\chiisen\" }

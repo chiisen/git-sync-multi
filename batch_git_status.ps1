@@ -1,3 +1,9 @@
+# ==============================================================================
+# 腳本名稱: batch_git_status.ps1
+# 功能描述: 批次異動檢查工具。
+#           檢查所有專案狀態、自動抓取描述，並具備環境雜訊自動自愈功能。
+# ==============================================================================
+
 # 定義載入 .env 的函式
 function Load-Env {
     param($Path = ".env")
@@ -22,6 +28,10 @@ if ($env:GITHUB_ACCOUNT) {
     Write-Host "切換 GitHub 帳號至: $env:GITHUB_ACCOUNT" -ForegroundColor Cyan
     gh auth switch -u $env:GITHUB_ACCOUNT 2>$null
 }
+
+Write-Host ">>> 批次異動檢查工具" -ForegroundColor Yellow
+Write-Host "功能：掃描異動狀態、自動抓取 GitHub 描述，並處理環境產生的雜訊檔案。" -ForegroundColor Gray
+Write-Host ""
 
 # 設定搜尋的根目錄 (優先從環境變數取得)
 $rootPath = if ($env:ROOT_PATH) { $env:ROOT_PATH } else { "D:\github\chiisen\" }

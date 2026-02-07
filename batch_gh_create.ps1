@@ -1,3 +1,9 @@
+# ==============================================================================
+# 腳本名稱: batch_gh_create.ps1
+# 功能描述: 批次 GitHub 倉庫建立工具。
+#           快速在多個 GitHub 帳號下同步建立 Repository，並自動處理權限與本地關聯。
+# ==============================================================================
+
 # 定義載入 .env 的函式
 function Load-Env {
     param($Path = ".env")
@@ -30,6 +36,11 @@ if ($env:GITHUB_ACCOUNT) {
     Write-Host "切換 GitHub 帳號至: $env:GITHUB_ACCOUNT" -ForegroundColor Cyan
     gh auth switch -u $env:GITHUB_ACCOUNT 2>$null
 }
+
+Write-Host ">>> 批次 GitHub 倉庫建立工具" -ForegroundColor Yellow
+Write-Host "功能：快速在多個 GitHub 帳號下同步建立 Repository，並自動處理權限與本地關聯。" -ForegroundColor Gray
+Write-Host ""
+
 if (-not (Check-GhCli)) { exit }
 
 # 顯示當前 GitHub 帳號狀態

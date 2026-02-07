@@ -1,3 +1,9 @@
+# ==============================================================================
+# 腳本名稱: batch_git_remote.ps1
+# 功能描述: 批次遠端檢查與導出工具。
+#           掃描遠端位址、分類日誌並自動導出標準專案清單。
+# ==============================================================================
+
 # 定義載入 .env 的函式
 function Load-Env {
     param($Path = ".env")
@@ -22,6 +28,10 @@ if ($env:GITHUB_ACCOUNT) {
     Write-Host "切換 GitHub 帳號至: $env:GITHUB_ACCOUNT" -ForegroundColor Cyan
     gh auth switch -u $env:GITHUB_ACCOUNT 2>$null
 }
+
+Write-Host ">>> 批次遠端檢查與導出工具" -ForegroundColor Yellow
+Write-Host "功能：掃描遠端位址、智慧導出清單，並依據私有/分支/完成標記進行分類。" -ForegroundColor Gray
+Write-Host ""
 
 # 設定搜尋的根目錄
 $rootPath = if ($env:ROOT_PATH) { $env:ROOT_PATH } else { "D:\github\chiisen\" }

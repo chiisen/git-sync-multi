@@ -11,10 +11,38 @@
 - **`out/`**: 腳本執行後的最終資料產出物（如導出的專案清單）應存放在此。
 - **根目錄**: 僅存放核心腳本 (`*.ps1`) 為原則。
 
+## 🏗️ 系統運作架構
+本專案採用以下資料流向與並行處理邏輯：
+
+```mermaid
+graph TD
+    ENV[.env] -->|1. 載入帳號 GITHUB_ACCOUNT| Script((*.ps1))
+    INI[ini/*.txt] -->|2. 讀取清單| Script
+    Template[temp/*.example] -->|3. 讀取範本| Script
+    
+    subgraph Core Logic ["Parallel Processing (平行處理)"]
+        Script -->|4. 分派任務| Thread1[Thread 1]
+        Script -->|4. 分派任務| Thread2[Thread 2]
+        Script -->|4. 分派任務| Thread3[Thread 3]
+    end
+    
+    Thread1 -->|Buffer Data| MemoryBuffer
+    Thread2 -->|Buffer Data| MemoryBuffer
+    Thread3 -->|Buffer Data| MemoryBuffer
+    
+    MemoryBuffer -->|5. 批次寫入 (Batch Write)| Logs[logs/*.log]
+    MemoryBuffer -->|5. 批次寫入 (Batch Write)| Out[out/*.txt]
+    MemoryBuffer -->|5. 自愈還原 (Auto-Heal)| GitRepo[Git Repo]
+```
+
 ## 🔐 運作特徵與習慣
 開發或修改腳本時，請確保具備以下邏輯：
 
-### 1. 啟動自我檢查
+### 1. 腳本聲明與啟動說明
+- **標頭註解**: 每個腳本最上方必須包含該腳本的功能簡述、主要作者與最後維護規範說明。
+- **啟動提示**: 腳本開始執行時，必須先 `Write-Host` 輸出其在 `README.md` 中定義的核心功能描述，確保使用者明確知道即將執行的動作。
+
+### 2. 啟動自我檢查
 - **載入環境變數**: 啟動時必須優先執行 `Load-Env` 從 `.env` 取得配置。
 - **切換 GitHub 帳號**: 若環境變數定義了 `GITHUB_ACCOUNT`，必須自動執行 `gh auth switch -u $GITHUB_ACCOUNT` 確保權限正確。
 

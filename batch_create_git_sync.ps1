@@ -1,3 +1,9 @@
+# ==============================================================================
+# 腳本名稱: batch_create_git_sync.ps1
+# 功能描述: 批次並行同步初始化工具。
+#           批次建立 setup_git_sync.ps1 並具備智慧過濾與平行處理能力。
+# ==============================================================================
+
 # 定義載入 .env 的函式
 function Load-Env {
     param($Path = ".env")
@@ -22,6 +28,10 @@ if ($env:GITHUB_ACCOUNT) {
     Write-Host "切換 GitHub 帳號至: $env:GITHUB_ACCOUNT" -ForegroundColor Cyan
     gh auth switch -u $env:GITHUB_ACCOUNT 2>$null
 }
+
+Write-Host ">>> 批次並行同步初始化工具" -ForegroundColor Yellow
+Write-Host "功能：批次建立 setup_git_sync.ps1 並具備智慧過濾 (Private/Fork/Done) 與平行處理。" -ForegroundColor Gray
+Write-Host ""
 # 設定參數
 $rootPath = if ($env:ROOT_PATH) { $env:ROOT_PATH } else { "D:\github\chiisen\" }
 $logDir = Join-Path $PSScriptRoot "logs"
