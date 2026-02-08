@@ -5,6 +5,14 @@
 
 ## [Unreleased]
 
+### ✨ Features (新功能)
+- **mark_repos_done.ps1**: 新增批次標記專案完成工具，可將主帳號 Repository 的 description 從 `⁉️` 改為 `✅`。
+    - 使用獨立設定檔 `ini/repos_to_done.txt`，與其他腳本設定分離避免誤用。
+    - 日誌記錄於 `logs/mark_done_log.log`。
+- **batch_gh_create.ps1 增強**: 
+    - 建立其他帳號 Repository 後，自動更新主帳號 description 加上 `⁉️` 提醒。
+    - 更新成功後自動執行專案的 `setup_git_sync.ps1` 並處理 Git 變更（自動 commit 與 pull）。
+
 ## [1.1.0] - 2026-02-08
 ### 🚀 Performance (效能優化)
 - **Parallel Processing**: 為 `batch_git_pull.ps1` 與 `batch_create_git_sync.ps1` 引入 `ForEach-Object -Parallel`，大幅提升多專案處理速度。

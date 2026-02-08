@@ -105,6 +105,21 @@
 
 ---
 
+### 6. mark_repos_done.ps1 (標記專案完成)
+將主帳號 Repository 的 description 從 `⁉️` 改為 `✅`，標記專案為已完成。
+
+#### 功能特點
+- **獨立設定檔**：讀取 `ini/repos_to_done.txt`，與其他腳本設定分離，避免誤用。
+- **自動切換帳號**：啟動時自動讀取 `.env` 中的 `GITHUB_ACCOUNT` 並切換。
+- **智慧判斷**：自動跳過已標記 `✅` 或不符條件的專案。
+
+#### 使用方法
+- 在 `ini/repos_to_done.txt` 填入要標記完成的專案名稱（每行一個）。
+- 在 PowerShell 中執行：`./mark_repos_done.ps1`
+- **日誌紀錄**：執行結果記錄於 `logs/mark_done_log.log`。
+
+---
+
 ## ⚙️ 配置說明
 
 ### 1. 環境變數 (.env)
@@ -124,6 +139,12 @@ GITHUB_ACCOUNT=your_username        # 您的主要 GitHub 帳號
 - 格式：`[專案名稱] [可選參數]`。
 - 範例請參考 `ini/projects.txt.example`。
 - **支援參數**：可加入 `--public`, `--private`, `--description "..."`, `--license mit` 等所有 GitHub CLI 支援的參數。
+
+### 4. 完成標記清單 (ini/repos_to_done.txt)
+列出要標記為「已完成」的專案名稱：
+- 格式：每行一個專案名稱（子目錄名稱）。
+- 範例請參考 `ini/repos_to_done.txt.example`。
+- **使用腳本**: `mark_repos_done.ps1`。
 
 ---
 
@@ -156,6 +177,7 @@ GITHUB_ACCOUNT=your_username        # 您的主要 GitHub 帳號
 - **`out/extracted_projects.txt`**: 導出的可用專案清單，格式符合 `projects.txt`。
 - **`logs/git_pull_errors.log`**: 記錄更新失敗的倉庫。
 - **`logs/git_status_changed.log`**: 記錄偵測到異動的檔案清單與專案描述。
+- **`logs/mark_done_log.log`**: 記錄 `mark_repos_done.ps1` 的執行結果。
 
 > 💡 **提示**：所有 Log 與導出檔案在每次對應的腳本啟動時，都會自動清空舊資料。
 
@@ -167,8 +189,10 @@ GITHUB_ACCOUNT=your_username        # 您的主要 GitHub 帳號
 - `batch_create_git_sync.ps1`: 批次同步腳本初始化工具。
 - `batch_git_status.ps1`: 批次異動檢查工具。
 - `batch_git_remote.ps1`: 批次遠端位址掃描工具。
+- `mark_repos_done.ps1`: 批次標記專案完成工具。
 - `ini/accounts.txt.example`: 帳號清單範本。
 - `ini/projects.txt.example`: 專案清單範本。
+- `ini/repos_to_done.txt.example`: 完成標記清單範本。
 - `temp/setup_git_sync.ps1.example`: 同步腳本生成範本。
 - `.env.example`: 環境變數範本。
 - `GEMINI.md`: 專案級 AI 開發規範 (Local Context)。
