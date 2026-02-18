@@ -43,6 +43,28 @@
 
 ---
 
+### 2-1. git-multi-pull.ps1 (🚀 指定目錄更新)
+批次並行更新多個指定目錄內的 Git 倉庫。
+
+#### 功能特點
+- **指定目錄更新**：透過 `-Paths` 參數或 `GIT_SYNC_PATHS` 環境變數指定要更新的目錄。
+- **🚀 平行更新 (並行處理)**：使用 PowerShell 7 並行技術，同時執行多個 `git pull`。
+- **自動切換帳號**：啟動時自動讀取 `.env` 中的 `GITHUB_ACCOUNT` 並切換。
+- **錯誤日誌**：失敗的倉庫會記錄在 `logs/git_pull指定目錄_errors.log`。
+
+#### 使用方法
+```powershell
+# 參數指定目錄
+.\git-multi-pull.ps1 -Paths 'D:\repo1','D:\repo2','D:\repo3'
+
+# 或設定環境變數 (在 .env 或系統環境)
+GIT_SYNC_PATHS="D:\repo1
+D:\repo2"
+.\git-multi-pull.ps1
+```
+
+---
+
 ### 3. batch_create_git_sync.ps1 (🚀 批次並行初始化)
 #### 功能特點
 - **🚀 平行處理 (並行模式)**：使用並行技術同時進行 GitHub API 查詢與檔案生成，顯著提升初始化速度。
@@ -176,6 +198,7 @@ GITHUB_ACCOUNT=your_username        # 您的主要 GitHub 帳號
 - **`logs/excluded_sync_projects.log`**: 記錄 `batch_create_git_sync.ps1` 略過的專案（Private, Fork, 或 ✅）。
 - **`out/extracted_projects.ini`**: 導出的可用專案清單，格式符合 `projects.ini`。
 - **`logs/git_pull_errors.log`**: 記錄更新失敗的倉庫。
+- **`logs/git_pull指定目錄_errors.log`**: 記錄 `git-multi-pull.ps1` 更新失敗的倉庫。
 - **`logs/git_status_changed.log`**: 記錄偵測到異動的檔案清單與專案描述。
 - **`logs/mark_done_log.log`**: 記錄 `mark_repos_done.ps1` 的執行結果。
 
@@ -185,7 +208,8 @@ GITHUB_ACCOUNT=your_username        # 您的主要 GitHub 帳號
 
 ## 📄 檔案結構
 - `batch_gh_create.ps1`: 核心建立與同步工具。
-- `batch_git_pull.ps1`: 批次更新工具。
+- `batch_git_pull.ps1`: 批次更新工具 (掃描所有子目錄)。
+- `git-multi-pull.ps1`: 指定目錄批次更新工具。
 - `batch_create_git_sync.ps1`: 批次同步腳本初始化工具。
 - `batch_git_status.ps1`: 批次異動檢查工具。
 - `batch_git_remote.ps1`: 批次遠端位址掃描工具。
