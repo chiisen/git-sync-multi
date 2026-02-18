@@ -142,6 +142,37 @@ D:\repo2"
 
 ---
 
+### 7. sync-opencode-agents.ps1 (同步 OpenCode 規範檔案)
+從 `AI_AGENT_GUIDELINES` 儲存庫拉取最新檔案並覆蓋到指定目錄。
+
+#### 功能特點
+- **自動 git pull**：切換到來源目錄執行 git pull 取得最新檔案。
+- **多目標複製**：可同時複製到多個目標位置。
+- **工作目錄還原**：執行完畢後自動回到原始工作目錄。
+
+#### 使用方法
+```powershell
+# 預設參數執行
+.\sync-opencode-agents.ps1
+
+# 自訂參數
+.\sync-opencode-agents.ps1 -SourceDir "D:\github\chiisen\AI_AGENT_GUIDELINES" -FileName "GEMINI.md" -DestFile "C:\Users\chiis\.config\opencode\AGENTS.md"
+```
+
+#### 參數說明
+- `-SourceDir`：來源 Git 儲存庫目錄（預設：`D:\github\chiisen\AI_AGENT_GUIDELINES`）
+- `-FileName`：要同步的檔案名稱（預設：`GEMINI.md`）
+- `-DestFile`：目標檔案完整路徑（預設：`C:\Users\chiis\.config\opencode\AGENTS.md`）
+
+#### 排程自動執行 (Windows 工作排程器)
+```powershell
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"D:\github\chiisen\git-sync-multi\sync-opencode-agents.ps1`""
+$trigger = New-ScheduledTaskTrigger -Daily -At "9:00AM"
+Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "SyncOpenCodeAgents" -Description "同步 OpenCode 規範檔案"
+```
+
+---
+
 ## ⚙️ 配置說明
 
 ### 1. 環境變數 (.env)
@@ -214,6 +245,9 @@ GITHUB_ACCOUNT=your_username        # 您的主要 GitHub 帳號
 - `batch_git_status.ps1`: 批次異動檢查工具。
 - `batch_git_remote.ps1`: 批次遠端位址掃描工具。
 - `mark_repos_done.ps1`: 批次標記專案完成工具。
+- `sync-opencode-agents.ps1`: 同步 AI_AGENT_GUIDELINES 檔案至 OpenCode 設定目錄。
+
+### 7. sync-opencode-agents.ps1 (同步 OpenCode 規範檔案)
 - `ini/accounts.ini.example`: 帳號清單範本。
 - `ini/projects.ini.example`: 專案清單範本。
 - `ini/repos_to_done.ini.example`: 完成標記清單範本。
