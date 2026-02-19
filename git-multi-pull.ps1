@@ -58,8 +58,12 @@ function Import-Env {
 Import-Env
 
 if ($env:GITHUB_ACCOUNT) {
-    Write-Host "切換 GitHub 帳號至: $env:GITHUB_ACCOUNT" -ForegroundColor Cyan
-    gh auth switch -u $env:GITHUB_ACCOUNT 2>$null
+    if (Get-Command gh -ErrorAction SilentlyContinue) {
+        Write-Host "切換 GitHub 帳號至: $env:GITHUB_ACCOUNT" -ForegroundColor Cyan
+        gh auth switch -u $env:GITHUB_ACCOUNT 2>$null
+    } else {
+        Write-Host "⚠️  警告：找不到 gh CLI，略過帳號切換。請執行 'winget install GitHub.Cli' 安裝。" -ForegroundColor Yellow
+    }
 }
 
 Write-Host ">>> Git 多目錄同步工具" -ForegroundColor Yellow
